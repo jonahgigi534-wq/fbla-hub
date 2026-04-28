@@ -9,17 +9,28 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = 'super_secret_fbla_key_2026';
 
-const allowedOrigins = ['http://localhost:5173', process.env.FRONTEND_URL];
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://fbla-hub-vlwo.vercel.app',
+  process.env.FRONTEND_URL,
+].filter(Boolean); // remove undefined/null entries
+
 app.use(cors({
   origin: function(origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, Postman, same-origin)
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      callback(new Error(`CORS: origin ${origin} not allowed`));
     }
   },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
+// Explicitly handle pre-flight OPTIONS requests for all routes
+app.options('*', cors());
 app.use(express.json());
 app.use(cookieParser());
 
@@ -74,7 +85,7 @@ app.post('/api/auth/signup', async (req, res) => {
       [name, email, hash, 'student', 0]);
 
     const token = jwt.sign({ id, email, role: 'student' }, JWT_SECRET, { expiresIn: '24h' });
-    res.cookie('token', token, { httpOnly: true, secure: false, sameSite: 'strict', maxAge: 24 * 60 * 60 * 1000 });
+    res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'none', maxAge: 24 * 60 * 60 * 1000 });
     
     res.json({ id, name, role: 'student' });
   } catch (err) {
