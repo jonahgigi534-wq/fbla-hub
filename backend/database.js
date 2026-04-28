@@ -1,12 +1,18 @@
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 
+if (!process.env.DATABASE_URL) {
+  console.error('FATAL: DATABASE_URL environment variable is not set. Please add it in your Render dashboard under Environment.');
+  process.exit(1);
+}
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
+  ssl: { rejectUnauthorized: false },
 });
 
 const initDb = async () => {
+  console.log('Connecting to PostgreSQL...');
   const client = await pool.connect();
   try {
     await client.query(`

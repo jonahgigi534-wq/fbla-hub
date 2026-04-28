@@ -34,6 +34,9 @@ app.use(cookieParser());
 
 initDb();
 
+// Health check - visit https://fbla-hub-backend.onrender.com/health to verify server is up
+app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
+
 // Middleware to authenticate JWT
 const authenticateToken = (req, res, next) => {
   const token = req.cookies.token;
