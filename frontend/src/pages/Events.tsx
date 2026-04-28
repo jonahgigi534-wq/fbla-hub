@@ -8,7 +8,13 @@ export default function Events() {
   useEffect(() => {
     fetch(`${API_BASE_URL}/api/events`, { credentials: 'include' })
       .then(res => res.json())
-      .then(data => setEvents(data))
+      .then(data => {
+        if (Array.isArray(data)) {
+          setEvents(data);
+        } else {
+          setEvents([]);
+        }
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
