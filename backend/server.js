@@ -29,8 +29,6 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// Explicitly handle pre-flight OPTIONS requests for all routes (Express 5 syntax)
-app.options('(.*)', cors());
 app.use(express.json());
 app.use(cookieParser());
 
