@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
+import { API_BASE_URL } from '../config';
 
 export default function Admin() {
   const [users, setUsers] = useState<any[]>([]);
@@ -21,8 +22,8 @@ export default function Admin() {
   const fetchData = async () => {
     try {
       const [uRes, eRes] = await Promise.all([
-        fetch('http://localhost:5000/api/admin/users', { credentials: 'include' }),
-        fetch('http://localhost:5000/api/events', { credentials: 'include' })
+        fetch(`${API_BASE_URL}/api/admin/users`, { credentials: 'include' }),
+        fetch(`${API_BASE_URL}/api/events`, { credentials: 'include' })
       ]);
       if (uRes.ok) setUsers(await uRes.json());
       if (eRes.ok) setEvents(await eRes.json());
@@ -51,7 +52,7 @@ export default function Admin() {
     if (!uid || !pts) return;
 
     try {
-      const res = await fetch('http://localhost:5000/api/points/award', {
+      const res = await fetch(`${API_BASE_URL}/api/points/award`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: uid, event_name: name, points: Number(pts) }),
@@ -76,7 +77,7 @@ export default function Admin() {
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('http://localhost:5000/api/admin/users', {
+      const res = await fetch(`${API_BASE_URL}/api/admin/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newMember),
@@ -98,7 +99,7 @@ export default function Admin() {
   const handleDeleteUser = async (id: number) => {
     if (!window.confirm("Are you sure you want to delete this user?")) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/admin/users/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/admin/users/${id}`, {
         method: 'DELETE',
         credentials: 'include'
       });
@@ -114,7 +115,7 @@ export default function Admin() {
   const handleDeleteEvent = async (id: number) => {
     if (!window.confirm("Are you sure you want to delete this event?")) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/admin/events/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/admin/events/${id}`, {
         method: 'DELETE',
         credentials: 'include'
       });
@@ -130,7 +131,7 @@ export default function Admin() {
   const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('http://localhost:5000/api/events', {
+      const res = await fetch(`${API_BASE_URL}/api/events`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...newEvent, points_value: Number(newEvent.points_value) }),

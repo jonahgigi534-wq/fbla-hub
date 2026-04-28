@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Trophy } from 'lucide-react';
 import { useAuth } from '../App';
+import { API_BASE_URL } from '../config';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -12,8 +13,8 @@ export default function Dashboard() {
     const fetchData = async () => {
       try {
         const [dashRes, leadRes] = await Promise.all([
-          fetch('http://localhost:5000/api/dashboard', { credentials: 'include' }),
-          fetch('http://localhost:5000/api/leaderboard', { credentials: 'include' })
+          fetch(`${API_BASE_URL}/api/dashboard`, { credentials: 'include' }),
+          fetch(`${API_BASE_URL}/api/leaderboard`, { credentials: 'include' })
         ]);
         
         if (dashRes.ok && leadRes.ok) {

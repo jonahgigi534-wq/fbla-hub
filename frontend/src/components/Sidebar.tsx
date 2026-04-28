@@ -2,13 +2,14 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Home, Calendar, HelpCircle, Shield, LogOut } from 'lucide-react';
 import { useAuth } from '../App';
+import { API_BASE_URL } from '../config';
 
 export default function Sidebar() {
   const { user, setUser } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    await fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' });
+    await fetch(`${API_BASE_URL}/api/auth/logout`, { method: 'POST', credentials: 'include' });
     setUser(null);
     navigate('/login');
   };

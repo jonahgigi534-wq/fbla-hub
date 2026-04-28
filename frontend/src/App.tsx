@@ -7,6 +7,7 @@ import Events from './pages/Events';
 import EventRecommender from './pages/EventRecommender';
 import Admin from './pages/Admin';
 import CustomCursor from './components/CustomCursor';
+import { API_BASE_URL } from './config';
 
 // Auth Context
 interface AuthContextType {
@@ -49,7 +50,7 @@ export default function App() {
 
   useEffect(() => {
     // Check auth on load
-    fetch('http://localhost:5000/api/auth/me', {credentials: 'include'})
+    fetch(`${API_BASE_URL}/api/auth/me`, {credentials: 'include'})
       .then(res => {
         if (res.ok) return res.json();
         throw new Error('Not auth');

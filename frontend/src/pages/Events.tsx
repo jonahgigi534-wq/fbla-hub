@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import { API_BASE_URL } from '../config';
 
 export default function Events() {
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/events', { credentials: 'include' })
+    fetch(`${API_BASE_URL}/api/events`, { credentials: 'include' })
       .then(res => res.json())
       .then(data => setEvents(data))
       .catch(console.error)
