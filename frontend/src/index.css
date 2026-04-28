@@ -1,0 +1,55 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-sans bg-[#f8f9fc] text-black m-0 antialiased;
+  }
+}
+
+@media (pointer: fine) {
+  body, body *, a, button {
+    cursor: none !important;
+  }
+}
+
+@layer utilities {
+  .bg-navy-pattern {
+    background-color: #0a2e7f;
+    background-image: repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.02) 0px,
+      rgba(255, 255, 255, 0.02) 2px,
+      transparent 2px,
+      transparent 8px
+    );
+  }
+
+  .animate-fade-up {
+    animation: fade-up 150ms ease-out forwards;
+  }
+  .animate-slide-left {
+    animation: slide-left 200ms ease-out forwards;
+  }
+  .animate-slide-right {
+    animation: slide-right 200ms ease-out forwards;
+  }
+}
+
+@keyframes fade-up {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-left {
+  0% { opacity: 0; transform: translateX(20px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slide-right {
+  0% { opacity: 0; transform: translateX(-20px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
