@@ -9,8 +9,15 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = 'super_secret_fbla_key_2026';
 
+const allowedOrigins = ['http://localhost:5173', process.env.FRONTEND_URL];
 app.use(cors({
-  origin: 'http://localhost:5173', // Vite default port
+  origin: function(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 app.use(express.json());
