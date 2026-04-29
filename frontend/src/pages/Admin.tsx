@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, Trash2, Upload, FileSpreadsheet } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 
 export default function Admin() {
@@ -7,6 +7,14 @@ export default function Admin() {
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'manage' | 'import'>('manage');
+
+  // Bulk import state
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importPreview, setImportPreview] = useState<any[]>([]);
+  const [importing, setImporting] = useState(false);
+  const [importResults, setImportResults] = useState<any>(null);
 
   // Award points form
   const [selectedUserId, setSelectedUserId] = useState('');
@@ -148,11 +156,93 @@ export default function Admin() {
     }
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportFile(file);
+    setImportResults(null);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      const lines = text.replace(/\\r/g, '').split('\\n');
+      if (lines.length === 0) return;
+      
+      let headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      let dataLines = lines.slice(1);
+
+      // If the first row doesn't have an 'email' column, assume it's headerless data
+      // mapping Col A to 'email', Col B to 'points', and Col C to 'event_name'
+      if (!headers.includes('email')) {
+        headers = ['email', 'points', 'event_name'];
+        dataLines = lines; // Include the first row in the data
+      }
+
+      const parsed = dataLines.map(line => {
+        if (!line.trim()) return null;
+        const values = line.split(',');
+        const obj: any = {};
+        headers.forEach((h, i) => {
+          obj[h] = values[i] ? values[i].trim() : '';
+        });
+        return obj;
+      }).filter(row => row && row.email && row.points);
+
+      setImportPreview(parsed);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleBulkImport = async () => {
+    if (importPreview.length === 0) return;
+    setImporting(true);
+    setImportResults(null);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/points/bulk`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows: importPreview }),
+        credentials: 'include'
+      });
+
+      const data = await res.json();
+      setImportResults(data);
+      if (res.ok) {
+        showToast('✓ Bulk import completed');
+        fetchData(); // refresh data
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setImporting(false);
+    }
+  };
+
   if (loading) return <div className="text-navy font-serif text-3xl">Loading Admin...</div>;
 
   return (
     <div className="max-w-6xl mx-auto pb-20 animate-fade-up">
-      <h1 className="text-navy font-serif text-5xl mb-8">Admin Panel</h1>
+      <div className="flex justify-between items-end mb-8 border-b border-[rgba(10,46,127,0.1)] pb-4">
+        <h1 className="text-navy font-serif text-5xl">Admin Panel</h1>
+        <div className="flex gap-4">
+          <button 
+            onClick={() => setActiveTab('manage')}
+            className={`px-4 py-2 font-medium transition-colors ${activeTab === 'manage' ? 'text-blue border-b-2 border-blue' : 'text-black/60 hover:text-navy'}`}
+          >
+            Manage Data
+          </button>
+          <button 
+            onClick={() => setActiveTab('import')}
+            className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${activeTab === 'import' ? 'text-blue border-b-2 border-blue' : 'text-black/60 hover:text-navy'}`}
+          >
+            <FileSpreadsheet size={18} /> Sheets Import
+          </button>
+        </div>
+      </div>
+
+      {activeTab === 'manage' && (
+        <>
 
       <div className="bg-white rounded-xl shadow-card p-8 mb-8">
         <h2 className="font-serif text-3xl text-navy mb-6">Award Points</h2>
@@ -349,6 +439,134 @@ export default function Admin() {
           </div>
         </div>
       </div>
+      </>)}
+
+      {activeTab === 'import' && (
+        <div className="bg-white rounded-xl shadow-card p-8 animate-fade-up">
+          <h2 className="font-serif text-3xl text-navy mb-4">Bulk Points Import</h2>
+          <p className="text-black/60 mb-6">
+            Upload a CSV exported from Google Sheets to quickly award points to multiple students. 
+            The CSV must contain the following headers: <code className="bg-gray-100 px-2 py-1 rounded">email</code>, <code className="bg-gray-100 px-2 py-1 rounded">points</code>, and optionally <code className="bg-gray-100 px-2 py-1 rounded">event_name</code>.
+          </p>
+
+          <div className="mb-8 p-6 border-2 border-dashed border-[rgba(10,46,127,0.2)] rounded-xl text-center bg-[#f8f9fc]">
+            <input 
+              type="file" 
+              accept=".csv" 
+              ref={fileInputRef} 
+              onChange={handleFileUpload}
+              className="hidden" 
+              id="csv-upload"
+            />
+            <label htmlFor="csv-upload" className="cursor-pointer flex flex-col items-center gap-4">
+              <div className="bg-white p-4 rounded-full shadow-sm">
+                <Upload size={32} className="text-blue" />
+              </div>
+              <div>
+                <span className="text-blue font-medium hover:underline">Click to upload</span>
+                <span className="text-black/60"> or drag and drop</span>
+                <p className="text-sm text-black/40 mt-1">CSV files only</p>
+              </div>
+            </label>
+            {importFile && (
+              <div className="mt-4 text-sm font-medium text-navy bg-white py-2 px-4 rounded-lg shadow-sm inline-block">
+                Selected: {importFile.name}
+              </div>
+            )}
+          </div>
+
+          {importPreview.length > 0 && !importResults && (
+            <div className="mb-8">
+              <div className="flex justify-between items-end mb-4">
+                <h3 className="font-medium text-lg text-navy">Preview ({importPreview.length} rows)</h3>
+                <button 
+                  onClick={handleBulkImport}
+                  disabled={importing}
+                  className="bg-blue text-white px-6 py-2.5 rounded-lg font-medium hover:bg-cobalt transition-colors disabled:opacity-50"
+                >
+                  {importing ? 'Importing...' : 'Confirm & Import'}
+                </button>
+              </div>
+              <div className="max-h-64 overflow-y-auto border border-[rgba(10,46,127,0.1)] rounded-lg">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-[#f8f9fc] sticky top-0 border-b border-[rgba(10,46,127,0.1)]">
+                    <tr>
+                      <th className="py-2 px-4 font-medium text-navy">Email</th>
+                      <th className="py-2 px-4 font-medium text-navy">Points</th>
+                      <th className="py-2 px-4 font-medium text-navy">Event</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {importPreview.slice(0, 100).map((row, i) => (
+                      <tr key={i} className="border-b border-[rgba(10,46,127,0.05)] last:border-0">
+                        <td className="py-2 px-4">{row.email}</td>
+                        <td className="py-2 px-4 text-gold font-medium">+{row.points}</td>
+                        <td className="py-2 px-4 text-black/60">{row.event_name || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {importPreview.length > 100 && (
+                  <div className="text-center py-2 text-sm text-black/50 bg-[#f8f9fc]">
+                    Showing first 100 rows...
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {importResults && (
+            <div className="mb-4">
+              <h3 className="font-medium text-lg text-navy mb-4">Import Results</h3>
+              <p className="mb-4 text-black/80">{importResults.message}</p>
+              
+              <div className="max-h-64 overflow-y-auto border border-[rgba(10,46,127,0.1)] rounded-lg">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-[#f8f9fc] sticky top-0 border-b border-[rgba(10,46,127,0.1)]">
+                    <tr>
+                      <th className="py-2 px-4 font-medium text-navy">Email</th>
+                      <th className="py-2 px-4 font-medium text-navy">Status</th>
+                      <th className="py-2 px-4 font-medium text-navy">Details</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {importResults.results?.map((res: any, i: number) => (
+                      <tr key={i} className="border-b border-[rgba(10,46,127,0.05)] last:border-0">
+                        <td className="py-2 px-4">{res.email}</td>
+                        <td className="py-2 px-4">
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                            res.status === 'success' ? 'bg-green-100 text-green-800' :
+                            res.status === 'not_found' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {res.status}
+                          </span>
+                        </td>
+                        <td className="py-2 px-4 text-black/60">
+                          {res.status === 'success' ? `Awarded +${res.points} points` : res.reason}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-6">
+                <button 
+                  onClick={() => {
+                    setImportResults(null);
+                    setImportPreview([]);
+                    setImportFile(null);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                  }}
+                  className="bg-gray-200 text-navy px-6 py-2.5 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                >
+                  Upload Another File
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {toast && (
         <div className="fixed bottom-6 right-6 bg-white border-l-4 border-green-500 shadow-card px-6 py-4 rounded-lg animate-fade-up z-50">
