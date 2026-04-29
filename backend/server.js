@@ -194,6 +194,46 @@ app.post('/api/points/award', authenticateToken, requireAdmin, async (req, res) 
   }
 });
 
+// Bulk import points from parsed CSV rows
+// Expected body: { rows: [{ email, event_name, points }] }
+app.post('/api/points/bulk', authenticateToken, requireAdmin, async (req, res) => {
+  const { rows } = req.body;
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return res.status(400).json({ error: 'No rows provided' });
+  }
+
+  const results = [];
+  for (const row of rows) {
+    const { email, event_name, points } = row;
+    if (!email || !points) {
+      results.push({ email, status: 'skipped', reason: 'Missing email or points' });
+      continue;
+    }
+    try {
+      const user = await get('SELECT id, name FROM users WHERE email = ?', [email]);
+      if (!user) {
+        results.push({ email, status: 'not_found', reason: 'No user with this email' });
+        continue;
+      }
+      const pts = Number(points);
+      if (isNaN(pts) || pts === 0) {
+        results.push({ email, status: 'skipped', reason: 'Invalid points value' });
+        continue;
+      }
+      await run('INSERT INTO points_history (user_id, event_name, date, points) VALUES (?, ?, ?, ?)',
+        [user.id, event_name || 'Sheet Import', new Date().toISOString(), pts]);
+      await run('UPDATE users SET total_points = total_points + ? WHERE id = ?', [pts, user.id]);
+      results.push({ email, name: user.name, status: 'success', points: pts });
+    } catch (err) {
+      results.push({ email, status: 'error', reason: err.message });
+    }
+  }
+
+  const succeeded = results.filter(r => r.status === 'success').length;
+  res.json({ message: `Imported ${succeeded}/${rows.length} rows`, results });
+});
+
+
 app.get('/api/admin/users', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const users = await query('SELECT id, name, email, role, total_points FROM users ORDER BY name ASC');
