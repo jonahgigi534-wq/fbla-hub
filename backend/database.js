@@ -146,10 +146,10 @@ const run = async (sql, params = []) => {
   let paramIndex = 0;
   const pgSql = sql.replace(/\?/g, () => `$${++paramIndex}`);
   
-  // For INSERT statements, add RETURNING id to get the last inserted ID
+  // For INSERT statements, add RETURNING * to get the last inserted row
   let finalSql = pgSql;
-  if (pgSql.trim().toUpperCase().startsWith('INSERT')) {
-    finalSql = pgSql + ' RETURNING id';
+  if (pgSql.trim().toUpperCase().startsWith('INSERT') && !pgSql.toUpperCase().includes('RETURNING')) {
+    finalSql = pgSql + ' RETURNING *';
   }
   
   const result = await pool.query(finalSql, params);
