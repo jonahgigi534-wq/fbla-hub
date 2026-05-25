@@ -47,6 +47,14 @@ const initDb = async () => {
       )
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS verification_codes (
+        email TEXT PRIMARY KEY,
+        code TEXT,
+        expires_at TIMESTAMP
+      )
+    `);
+
     // Seed data only if tables are empty
     const { rows } = await client.query("SELECT COUNT(*) as count FROM users");
     if (parseInt(rows[0].count) === 0) {

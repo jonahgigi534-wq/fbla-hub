@@ -3,6 +3,16 @@ const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { initDb, query, run, get } = require('./database');
+const nodemailer = require('nodemailer');
+
+// Initialize Nodemailer with Gmail App Password
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'jonagigi859@gmail.com', // User's real Gmail address
+    pass: 'araw anmn hicf xarn' // App Password provided by user
+  }
+});
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -60,6 +70,45 @@ const requireAdmin = (req, res, next) => {
 
 // --- AUTH ROUTES ---
 
+app.post('/api/auth/request-code', async (req, res) => {
+  const { email } = req.body;
+  
+  try {
+    const existing = await get('SELECT * FROM users WHERE email = ?', [email]);
+    if (existing) return res.status(400).json({ error: 'Email already exists' });
+    
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 15 * 60000).toISOString(); // 15 mins from now
+    
+    await run(`
+      INSERT INTO verification_codes (email, code, expires_at) 
+      VALUES (?, ?, ?) 
+      ON CONFLICT (email) DO UPDATE SET code = EXCLUDED.code, expires_at = EXCLUDED.expires_at
+    `, [email, code, expiresAt]);
+    
+    // Send real email via Nodemailer (Gmail)
+    const info = await transporter.sendMail({
+      from: '"FBLA Hub" <jonagigi859@gmail.com>',
+      to: email,
+      subject: 'Verify Your FBLA Hub Account',
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; text-align: center;">
+          <h2 style="color: #0a2e7f;">FBLA Membership Hub</h2>
+          <p>Your verification code is:</p>
+          <h1 style="letter-spacing: 5px; font-size: 32px; color: #333;">${code}</h1>
+          <p style="color: #666; font-size: 14px;">This code will expire in 15 minutes.</p>
+        </div>
+      `
+    });
+
+    console.log(`[Email Verification] Email successfully sent to ${email} (Message ID: ${info.messageId})`);
+    
+    res.json({ message: 'Verification email sent successfully' }); // Removed the demo_code!
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
   
@@ -80,10 +129,31 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 app.post('/api/auth/signup', async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, code } = req.body;
   try {
     const existing = await get('SELECT * FROM users WHERE email = ?', [email]);
     if (existing) return res.status(400).json({ error: 'Email already exists' });
+
+    if (!code) {
+      return res.status(400).json({ error: 'Verification code required' });
+    }
+
+    const verifyRecord = await get('SELECT * FROM verification_codes WHERE email = ?', [email]);
+    
+    if (!verifyRecord) {
+      return res.status(400).json({ error: 'No verification code requested for this email' });
+    }
+    
+    if (verifyRecord.code !== code) {
+      return res.status(400).json({ error: 'Invalid verification code' });
+    }
+    
+    if (new Date(verifyRecord.expires_at) < new Date()) {
+      return res.status(400).json({ error: 'Verification code has expired' });
+    }
+    
+    // Clear the code after successful validation
+    await run('DELETE FROM verification_codes WHERE email = ?', [email]);
 
     const hash = await bcrypt.hash(password, 10);
     const { id } = await run('INSERT INTO users (name, email, password, role, total_points) VALUES (?, ?, ?, ?, ?)', 
