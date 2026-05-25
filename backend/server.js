@@ -3,16 +3,10 @@ const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { initDb, query, run, get } = require('./database');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-// Initialize Nodemailer with Gmail App Password
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: 'jonagigi859@gmail.com', // User's real Gmail address
-    pass: 'araw anmn hicf xarn' // App Password provided by user
-  }
-});
+// Initialize Resend with the provided API key
+const resend = new Resend('re_SobzrvhV_MEBd5dX3cqra2PAvX4eUSVSs');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -86,9 +80,9 @@ app.post('/api/auth/request-code', async (req, res) => {
       ON CONFLICT (email) DO UPDATE SET code = EXCLUDED.code, expires_at = EXCLUDED.expires_at
     `, [email, code, expiresAt]);
     
-    // Send real email via Nodemailer (Gmail)
-    const info = await transporter.sendMail({
-      from: '"FBLA Hub" <jonagigi859@gmail.com>',
+    // Send real email via Resend API
+    const { data, error } = await resend.emails.send({
+      from: 'FBLA Hub <noreply@yourdomain.com>', // MUST BE UPDATED BY USER ONCE DOMAIN IS VERIFIED
       to: email,
       subject: 'Verify Your FBLA Hub Account',
       html: `
@@ -101,7 +95,12 @@ app.post('/api/auth/request-code', async (req, res) => {
       `
     });
 
-    console.log(`[Email Verification] Email successfully sent to ${email} (Message ID: ${info.messageId})`);
+    if (error) {
+      console.error('[Resend Error]', error);
+      return res.status(500).json({ error: 'Failed to send verification email.' });
+    }
+
+    console.log(`[Email Verification] Email successfully sent to ${email} (ID: ${data?.id})`);
     
     res.json({ message: 'Verification email sent successfully' }); // Removed the demo_code!
   } catch (err) {
