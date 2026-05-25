@@ -172,6 +172,79 @@ app.post('/api/auth/logout', (req, res) => {
   res.json({ message: 'Logged out' });
 });
 
+app.post('/api/auth/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  
+  try {
+    const user = await get('SELECT * FROM users WHERE email = ?', [email]);
+    if (!user) {
+      // Return success even if user not found to prevent email enumeration
+      return res.json({ message: 'If an account exists, a reset code was sent.' });
+    }
+    
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 15 * 60000).toISOString();
+    
+    await run(`
+      INSERT INTO verification_codes (email, code, expires_at) 
+      VALUES (?, ?, ?) 
+      ON CONFLICT (email) DO UPDATE SET code = EXCLUDED.code, expires_at = EXCLUDED.expires_at
+    `, [email, code, expiresAt]);
+    
+    const { error } = await resend.emails.send({
+      from: 'FBLA Hub <noreply@contractor-flow.org>',
+      to: email,
+      subject: 'Reset Your FBLA Hub Password',
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; text-align: center;">
+          <h2 style="color: #0a2e7f;">Password Reset Request</h2>
+          <p>Your password reset code is:</p>
+          <h1 style="letter-spacing: 5px; font-size: 32px; color: #333;">${code}</h1>
+          <p style="color: #666; font-size: 14px;">This code will expire in 15 minutes.</p>
+        </div>
+      `
+    });
+
+    if (error) {
+      console.error('[Resend Error]', error);
+      return res.status(500).json({ error: 'Failed to send reset email.' });
+    }
+    
+    res.json({ message: 'Password reset code sent successfully.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/auth/reset-password', async (req, res) => {
+  const { email, code, newPassword } = req.body;
+  
+  try {
+    if (!code) return res.status(400).json({ error: 'Reset code required' });
+
+    const verifyRecord = await get('SELECT * FROM verification_codes WHERE email = ?', [email]);
+    
+    if (!verifyRecord || verifyRecord.code !== code) {
+      return res.status(400).json({ error: 'Invalid or expired reset code' });
+    }
+    
+    if (new Date(verifyRecord.expires_at) < new Date()) {
+      return res.status(400).json({ error: 'Reset code has expired' });
+    }
+    
+    // Valid code, update password
+    const hash = await bcrypt.hash(newPassword, 10);
+    await run('UPDATE users SET password = ? WHERE email = ?', [hash, email]);
+    
+    // Clear code
+    await run('DELETE FROM verification_codes WHERE email = ?', [email]);
+    
+    res.json({ message: 'Password has been successfully reset.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/auth/me', authenticateToken, async (req, res) => {
   try {
     const user = await get('SELECT id, name, email, role, total_points FROM users WHERE id = ?', [req.user.id]);
