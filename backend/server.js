@@ -82,7 +82,7 @@ app.post('/api/auth/request-code', async (req, res) => {
     
     // Send real email via Resend API
     const { data, error } = await resend.emails.send({
-      from: 'FBLA Hub <noreply@yourdomain.com>', // MUST BE UPDATED BY USER ONCE DOMAIN IS VERIFIED
+      from: 'FBLA Hub <noreply@contractor-flow.org>',
       to: email,
       subject: 'Verify Your FBLA Hub Account',
       html: `
