@@ -121,7 +121,12 @@ export default function Dashboard() {
                       {index === 0 ? <Trophy size={16} /> : index + 1}
                     </div>
                     <div>
-                      <div className="font-medium text-navy text-sm">{u.name}</div>
+                      <div className="font-medium text-navy text-sm flex items-center gap-1.5">
+                        {u.name}
+                        {u.role === 'admin' && (
+                          <span className="bg-gold text-white text-[9px] uppercase font-bold px-1 py-0.5 rounded">Admin</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="font-serif text-navy font-bold">{u.total_points}</div>

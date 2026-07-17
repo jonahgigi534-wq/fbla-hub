@@ -261,10 +261,9 @@ app.get('/api/dashboard', authenticateToken, async (req, res) => {
     const user = await get('SELECT id, name, total_points FROM users WHERE id = ?', [req.user.id]);
     const history = await query('SELECT * FROM points_history WHERE user_id = ? ORDER BY date DESC', [req.user.id]);
     
-    // Calculate rank
-    const usersByPoints = await query("SELECT id, total_points FROM users WHERE role = 'student' ORDER BY total_points DESC");
-    let rank = usersByPoints.findIndex(u => u.id === req.user.id) + 1;
-    if (user.role === 'admin') rank = '-';
+    // Calculate rank across all users
+    const usersByPoints = await query("SELECT id, total_points FROM users ORDER BY total_points DESC");
+    const rank = usersByPoints.findIndex(u => u.id === req.user.id) + 1;
     
     // Events attended count
     const eventsAttended = history.length;
@@ -292,7 +291,7 @@ app.get('/api/dashboard', authenticateToken, async (req, res) => {
 
 app.get('/api/leaderboard', authenticateToken, async (req, res) => {
   try {
-    const leaderboard = await query("SELECT id, name, total_points FROM users WHERE role = 'student' ORDER BY total_points DESC LIMIT 5");
+    const leaderboard = await query("SELECT id, name, role, total_points FROM users ORDER BY total_points DESC LIMIT 10");
     res.json(leaderboard);
   } catch (err) {
     res.status(500).json({ error: err.message });

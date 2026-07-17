@@ -339,18 +339,16 @@ export default function Admin() {
                       <div className="text-xs text-black/50">{u.email}</div>
                     </td>
                     <td className="py-3 px-4 font-serif text-lg text-navy">
-                      {u.role === 'admin' ? '-' : u.total_points}
+                      {u.total_points}
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {u.role === 'student' && (
-                          <button
+                        <button
                             onClick={(e) => handleAwardPoints(e, u.id, 10)}
                             className="text-xs font-medium text-blue bg-blue/10 px-2 py-1.5 rounded hover:bg-blue/20 transition-colors"
                           >
                             +10 pts
                           </button>
-                        )}
                         <button
                           onClick={() => handlePromoteUser(u.id, u.role)}
                           title={u.role === 'admin' ? 'Revoke Admin' : 'Make Admin'}
