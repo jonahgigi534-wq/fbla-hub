@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, Calendar, HelpCircle, Shield, LogOut } from 'lucide-react';
+import { Home, Calendar, Shield, LogOut } from 'lucide-react';
 import { useAuth } from '../App';
 import { API_BASE_URL } from '../config';
 
@@ -17,7 +17,6 @@ export default function Sidebar() {
   const navItems = [
     { name: 'Dashboard', path: '/', icon: Home },
     { name: 'Upcoming Events', path: '/events', icon: Calendar },
-    { name: 'What Event?', path: '/recommend', icon: HelpCircle },
   ];
 
   if (user?.role === 'admin') {

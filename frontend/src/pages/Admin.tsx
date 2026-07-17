@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Trash2, Upload, FileSpreadsheet } from 'lucide-react';
+import { Plus, Trash2, Upload, FileSpreadsheet, ShieldCheck, ShieldOff } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 
 export default function Admin() {
@@ -113,6 +113,26 @@ export default function Admin() {
       });
       if (res.ok) {
         showToast('✓ User deleted');
+        fetchData();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handlePromoteUser = async (id: number, currentRole: string) => {
+    const newRole = currentRole === 'admin' ? 'student' : 'admin';
+    const action = newRole === 'admin' ? 'promote to Admin' : 'demote to Student';
+    if (!window.confirm(`Are you sure you want to ${action} this user?`)) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/users/${id}/promote`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: newRole }),
+        credentials: 'include'
+      });
+      if (res.ok) {
+        showToast(`✓ User ${newRole === 'admin' ? 'promoted to Admin' : 'demoted to Student'}`);
         fetchData();
       }
     } catch (err) {
@@ -321,18 +341,31 @@ export default function Admin() {
                     <td className="py-3 px-4 font-serif text-lg text-navy">
                       {u.role === 'admin' ? '-' : u.total_points}
                     </td>
-                    <td className="py-3 px-4 text-right flex items-center justify-end gap-2">
-                      {u.role === 'student' && (
+                    <td className="py-3 px-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {u.role === 'student' && (
+                          <button
+                            onClick={(e) => handleAwardPoints(e, u.id, 10)}
+                            className="text-xs font-medium text-blue bg-blue/10 px-2 py-1.5 rounded hover:bg-blue/20 transition-colors"
+                          >
+                            +10 pts
+                          </button>
+                        )}
                         <button
-                          onClick={(e) => handleAwardPoints(e, u.id, 10)}
-                          className="text-xs font-medium text-blue bg-blue/10 px-2 py-1.5 rounded hover:bg-blue/20 transition-colors"
+                          onClick={() => handlePromoteUser(u.id, u.role)}
+                          title={u.role === 'admin' ? 'Revoke Admin' : 'Make Admin'}
+                          className={`p-1.5 rounded transition-colors ${
+                            u.role === 'admin'
+                              ? 'text-amber-500 hover:bg-amber-50'
+                              : 'text-emerald-600 hover:bg-emerald-50'
+                          }`}
                         >
-                          +10 pts
+                          {u.role === 'admin' ? <ShieldOff size={16} /> : <ShieldCheck size={16} />}
                         </button>
-                      )}
-                      <button onClick={() => handleDeleteUser(u.id)} className="text-[#dc2626] hover:bg-[#dc2626]/10 p-1.5 rounded transition-colors">
-                        <Trash2 size={16} />
-                      </button>
+                        <button onClick={() => handleDeleteUser(u.id)} className="text-[#dc2626] hover:bg-[#dc2626]/10 p-1.5 rounded transition-colors">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

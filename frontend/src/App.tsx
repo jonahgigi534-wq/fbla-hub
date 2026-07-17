@@ -4,7 +4,6 @@ import Sidebar from './components/Sidebar';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Events from './pages/Events';
-import EventRecommender from './pages/EventRecommender';
 import Admin from './pages/Admin';
 import CustomCursor from './components/CustomCursor';
 import { API_BASE_URL } from './config';
@@ -69,7 +68,6 @@ export default function App() {
             <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} />
-            <Route path="/recommend" element={<ProtectedRoute><EventRecommender /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute requireAdmin><Admin /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>

@@ -412,6 +412,21 @@ app.delete('/api/admin/users/:id', authenticateToken, requireAdmin, async (req, 
   }
 });
 
+app.patch('/api/admin/users/:id/promote', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id, 10);
+    const { role } = req.body; // 'admin' or 'student'
+    if (!['admin', 'student'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role. Must be admin or student.' });
+    }
+    await run('UPDATE users SET role = ? WHERE id = ?', [role, userId]);
+    res.json({ message: `User role updated to ${role}` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 app.delete('/api/admin/events/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const eventId = parseInt(req.params.id, 10);
