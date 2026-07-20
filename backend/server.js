@@ -5,8 +5,8 @@ const bcrypt = require('bcryptjs');
 const { initDb, query, run, get } = require('./database');
 const { Resend } = require('resend');
 
-// Initialize Resend with the provided API key
-const resend = new Resend('re_SobzrvhV_MEBd5dX3cqra2PAvX4eUSVSs');
+// Initialize Resend — key is stored as RESEND_API_KEY env var on Render
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
