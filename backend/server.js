@@ -5,8 +5,15 @@ const bcrypt = require('bcryptjs');
 const { initDb, query, run, get } = require('./database');
 const { Resend } = require('resend');
 
-// Initialize Resend — key is stored as RESEND_API_KEY env var on Render
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazily initialize Resend so a missing key doesn't crash the server at startup
+let _resend = null;
+const getResend = () => {
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY environment variable is not set. Add it in your Render dashboard under Environment.');
+  }
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY);
+  return _resend;
+};
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -81,6 +88,7 @@ app.post('/api/auth/request-code', async (req, res) => {
     `, [email, code, expiresAt]);
     
     // Send real email via Resend API
+    const resend = getResend();
     const { data, error } = await resend.emails.send({
       from: 'FBLA Hub <noreply@contractor-flow.org>',
       to: email,
@@ -191,6 +199,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
       ON CONFLICT (email) DO UPDATE SET code = EXCLUDED.code, expires_at = EXCLUDED.expires_at
     `, [email, code, expiresAt]);
     
+    const resend = getResend();
     const { error } = await resend.emails.send({
       from: 'FBLA Hub <noreply@contractor-flow.org>',
       to: email,
